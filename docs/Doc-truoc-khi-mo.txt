@@ -1,0 +1,24 @@
+MacPulse: cài đặt và mở lần đầu
+
+Dùng được trên Mac chip Apple (M1, M2, M3, M4 và mới hơn), macOS 14 Sonoma trở lên. Mac chip Intel không chạy được.
+
+1. Kéo biểu tượng MacPulse vào thư mục Applications ngay trong cửa sổ này.
+
+2. Mở thư mục Applications, bấm đúp MacPulse.
+
+3. Lần đầu macOS có thể báo không mở được, vì app chưa được Apple công chứng (notarize). Cách mở:
+   - Bấm "Xong" để đóng thông báo.
+   - Vào Cài đặt hệ thống, chọn Quyền riêng tư & Bảo mật, kéo xuống mục Bảo mật.
+   - Bấm "Vẫn mở" cạnh dòng nhắc tới MacPulse, rồi nhập mật khẩu máy.
+   Chỉ phải làm một lần. Các bản cập nhật sau app tự tải và tự cài.
+
+   Nếu quen Terminal, một lệnh là xong:
+   xattr -dr com.apple.quarantine /Applications/MacPulse.app
+
+4. MacPulse hiện trên thanh menu, cạnh đồng hồ. Bấm vào biểu tượng để xem bảng.
+
+Muốn chỉnh quạt: vào tab Quạt, bấm "Cài quyền điều khiển quạt" và nhập mật khẩu máy một lần. MacBook Air không có quạt nên không cần bước này.
+
+Gỡ app: nút bánh răng, chọn "Gỡ MacPulse khỏi máy…". Quạt trở về chế độ mặc định của macOS.
+
+MacPulse chỉ đọc dữ liệu ngay trên máy bạn. App chỉ kết nối mạng để hỏi GitHub có bản mới hay không.
