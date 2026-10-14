@@ -54,6 +54,22 @@ xcrun notarytool store-credentials macpulse   # một lần, nhập Apple ID và
 DEVELOPER_ID="Developer ID Application: Tên (TEAMID)" NOTARY_PROFILE=macpulse ./release.sh 1.1.0
 ```
 
+## Helper tự cập nhật ("Luôn cho phép")
+
+Lần cài helper đầu tiên luôn hỏi mật khẩu. Nếu người dùng giữ ô "Luôn cho phép", script cài tạo file `/Library/Application Support/MacPulse/helper-auto-update` thuộc root. Về sau khi app có helper mới:
+
+1. App ghi đường dẫn thư mục Resources của mình vào `helper-update-request`.
+2. Helper (root) đọc file `MacPulseFanHelper` và `MacPulseFanHelper.sig` vào bộ nhớ, kiểm chữ ký Ed25519 bằng khóa công khai gắn cứng trong helper.
+3. Khớp thì ghi đúng các byte vừa kiểm vào `/Library/PrivilegedHelperTools/`, rồi thoát để launchd chạy bản mới. Không khớp thì bỏ qua và ghi log.
+
+Không có sudo mở rộng, không lưu mật khẩu. Chương trình khác trên máy không lợi dụng được vì chỉ bản có chữ ký bằng khóa bí mật của bạn mới được cài. `build.sh` tự ký helper nếu máy có khóa.
+
+## Kiểm thử
+
+- Chụp giao diện mà không đụng màn hình đang dùng: `.build/MacPulse.app/Contents/MacOS/MacPulse --qa-window "Quạt" [dark]` vẽ bảng vào cửa sổ nằm sau mọi cửa sổ, rồi chụp bằng `screencapture -l <id cửa sổ>`.
+- Hẹn giờ không tắt máy thật: biến môi trường `MACPULSE_DRYRUN=1`.
+- Các hàm thuần đã có phép thử nhỏ: so sánh phiên bản và kiểm chữ ký (`Updater`), giờ tắt của chế độ "Khi xong việc" (`PowerManager.autoOffAt`), gộp pipeline giải mã/mã hóa (`TaskTracker.mergePipelines`).
+
 ## Tương thích các dòng máy
 
 App dò mọi thứ lúc chạy nên không gắn cứng theo một đời chip:

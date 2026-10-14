@@ -68,6 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var currentSymbol = ""
     private var bag = Set<AnyCancellable>()
     private var termSource: DispatchSourceSignal?
+    private var qaWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -98,6 +99,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         // Chạy thẳng từ file .dmg: đề nghị chuyển vào thư mục Ứng dụng.
         DispatchQueue.main.async { AppLocation.offerMoveIfNeeded() }
+
+        // --qa-window <tab> [dark]: vẽ bảng vào cửa sổ riêng nằm sau mọi cửa sổ để chụp kiểm tra
+        // (screencapture -l <id>), không che hay chụp lẫn màn hình người dùng.
+        if let i = CommandLine.arguments.firstIndex(of: "--qa-window") {
+            let args = CommandLine.arguments
+            if i + 1 < args.count { UserDefaults.standard.set(args[i + 1], forKey: "tab") }
+            let qaRoot = PopoverView(prefs: prefs).environmentObject(monitor).environmentObject(fan)
+                .environmentObject(tracker).environmentObject(power).environmentObject(updater)
+            let w = NSWindow(contentRect: NSRect(x: 40, y: 40, width: 420, height: 660), styleMask: [.borderless], backing: .buffered, defer: false)
+            w.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)   // nằm sau mọi cửa sổ
+            w.contentViewController = NSHostingController(rootView: qaRoot)
+            if args.contains("dark") { w.appearance = NSAppearance(named: .darkAqua) } else { w.appearance = NSAppearance(named: .aqua) }
+            w.backgroundColor = .windowBackgroundColor
+            w.title = "MacPulse QA"
+            w.orderFrontRegardless()
+            qaWindow = w
+            monitor.setActive(true)
+            if UserDefaults.standard.string(forKey: "tab") == Tab.tasks.rawValue { tracker.setVisible(true) }
+        }
 
         // Chạy kèm --show thì tự mở bảng (dùng khi kiểm tra giao diện).
         if CommandLine.arguments.contains("--show") {

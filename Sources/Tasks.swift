@@ -715,7 +715,7 @@ final class TaskTracker: ObservableObject {
                                          detail: "Việc \(min(info.todoDone + 1, info.todoTotal))/\(info.todoTotal)" + (info.todoCurrent.map { ": " + $0 } ?? ""))
         } else if let slowest = children.compactMap(\.progress.eta).max() {
             item.progress = TaskProgress(fraction: nil, eta: slowest, detail: "Theo việc con chậm nhất")
-        } else if working {
+        } else if working, info.toolCalls > 0 {
             item.progress.detail = "\(info.toolCalls) lần gọi công cụ trong lượt này"
         }
         return item

@@ -82,12 +82,10 @@ final class SensorReader {
     private func discoverKeys() {
         guard let smc else { return }
         let keys = smc.allKeys().filter { $0.hasPrefix("T") }
-        // Bỏ các khóa không phải cảm biến thật (luôn đọc 0, âm hoặc vài độ).
+        // Lấy đủ mọi khóa kiểu số thực; số vô lý (nhân đang nghỉ có lúc đọc ra 0, âm, vài độ) bị lọc ở từng lần đọc,
+        // vì lọc một lần lúc khởi động sẽ loại oan cảm biến của nhân đang nghỉ đúng lúc đó.
         func pick(_ prefix: String) -> [String] {
-            keys.filter {
-                guard $0.hasPrefix(prefix), let v = smc.read($0), v.type == "flt ", let n = v.number else { return false }
-                return n > 10 && n < 125
-            }
+            keys.filter { $0.hasPrefix(prefix) && smc.read($0)?.type == "flt " }
         }
         perfKeys = pick("Tp")
         effKeys = pick("Te")

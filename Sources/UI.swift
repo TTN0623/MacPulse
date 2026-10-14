@@ -263,8 +263,9 @@ struct TempGrid: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Nhiệt độ & quạt").font(.headline)
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 8) {
-                item("CPU nhân hiệu năng", Fmt.temp(s.cpuPerfTemp), ThermalGuide.color(s.cpuPerfTemp, .chip))
-                item("CPU nhân tiết kiệm", Fmt.temp(s.cpuEffTemp), ThermalGuide.color(s.cpuEffTemp, .chip))
+                // Nhân đang nghỉ (tắt nguồn) thì cảm biến của nó không trả số.
+                item("CPU nhân hiệu năng", s.cpuPerfTemp.map { Fmt.temp($0) } ?? "đang nghỉ", ThermalGuide.color(s.cpuPerfTemp, .chip))
+                item("CPU nhân tiết kiệm", s.cpuEffTemp.map { Fmt.temp($0) } ?? "đang nghỉ", ThermalGuide.color(s.cpuEffTemp, .chip))
                 item("GPU", Fmt.temp(s.gpuTemp), ThermalGuide.color(s.gpuTemp, .chip))
                 item("SSD", Fmt.temp(s.ssdTemp), ThermalGuide.color(s.ssdTemp, .ssd))
                 if SystemInfo.hasBattery {
@@ -596,12 +597,15 @@ struct SmartFanSection: View {
             HStack(spacing: 6) {
                 ForEach(FanController.presets) { p in
                     let on = p.start == fan.smartStart && p.full == fan.smartFull
-                    Button(p.name) { fan.setSmart(start: p.start, full: p.full) }
-                        .controlSize(.small)
-                        .buttonStyle(.bordered)
-                        .tint(on ? .accentColor : nil)
-                        .fontWeight(on ? .semibold : .regular)
-                        .help(p.note)
+                    Group {
+                        if on {
+                            Button(p.name) { fan.setSmart(start: p.start, full: p.full) }.buttonStyle(.borderedProminent).fontWeight(.semibold)
+                        } else {
+                            Button(p.name) { fan.setSmart(start: p.start, full: p.full) }.buttonStyle(.bordered)
+                        }
+                    }
+                    .controlSize(.small)
+                    .help(p.note)
                 }
                 Spacer()
             }
@@ -614,7 +618,7 @@ struct SmartFanSection: View {
                     Spacer()
                     Text("\(Int(fan.smartStart))°C").font(.callout.weight(.semibold)).monospacedDigit()
                 }
-                Slider(value: start, in: 60...105, step: 1)
+                Slider(value: start, in: 60...105)
             }
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
@@ -622,12 +626,12 @@ struct SmartFanSection: View {
                     Spacer()
                     Text("\(Int(fan.smartFull))°C").font(.callout.weight(.semibold)).monospacedDigit()
                 }
-                Slider(value: full, in: (fan.smartStart + 5)...115, step: 1)
+                Slider(value: full, in: (fan.smartStart + 5)...115)
             }
             TempZoneMeter(start: fan.smartStart, full: fan.smartFull, current: chipTemp)
             let safety = fan.activePreset ?? FanController.presets[1]
-            Text("Chốt an toàn: điểm nóng nhất từ \(Int(safety.hot))°C thì quạt không dưới \(Int(safety.hotPct))%; macOS báo căng nhiệt thì quạt chạy hết cỡ. Nguội dưới \(Int(fan.smartStart - safety.hyst))°C đủ \(Int(safety.hold)) giây thì trả quyền cho macOS.")
-                .font(.caption2).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
+            Text("Chốt an toàn: điểm nóng nhất từ \(Int(safety.hot))°C thì \(safety.hotPct >= 100 ? "quạt chạy hết cỡ" : "quạt không dưới \(Int(safety.hotPct))%"); macOS báo căng nhiệt cũng vậy. Nguội dưới \(Int(fan.smartStart - safety.hyst))°C đủ \(Int(safety.hold)) giây thì trả quyền cho macOS.")
+                .font(.caption2).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Label(status, systemImage: boosting ? "wind" : "checkmark.circle")
                 .font(.callout).fixedSize(horizontal: false, vertical: true)
         }

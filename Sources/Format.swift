@@ -44,7 +44,8 @@ enum Fmt {
 
     static func bytes(_ b: Double) -> String {
         let gb = b / 1_073_741_824
-        if gb >= 1 { return gb.formatted(.number.precision(.fractionLength(1)).locale(vi)) + " GB" }
+        // Từ ~0,95 GB ghi theo GB, tránh kiểu "1.017 MB" dễ đọc nhầm thành 1,017.
+        if gb >= 0.95 { return gb.formatted(.number.precision(.fractionLength(1)).locale(vi)) + " GB" }
         return Int((b / 1_048_576).rounded()).formatted(.number.locale(vi)) + " MB"
     }
 

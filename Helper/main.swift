@@ -41,12 +41,10 @@ guard let smc = try? SMC() else {
 let fanCount = Int(smc.number("FNum") ?? 0)
 let hasUnlockKey = smc.read("Ftst") != nil
 
-// Cảm biến nhiệt thật (bỏ khóa luôn đọc 0 hoặc âm), chia nhóm CPU và GPU.
+// Mọi khóa nhiệt kiểu số thực, chia nhóm CPU và GPU. Số vô lý bị lọc ở từng lần đọc (avg, hottest),
+// không lọc lúc khởi động vì nhân đang nghỉ có lúc đọc ra 0 hoặc âm.
 func sensors(_ prefixes: [String]) -> [String] {
-    smc.allKeys().filter { key in
-        guard prefixes.contains(where: { key.hasPrefix($0) }), let v = smc.read(key), v.type == "flt ", let n = v.number else { return false }
-        return n > 10 && n < 125
-    }
+    smc.allKeys().filter { key in prefixes.contains(where: { key.hasPrefix($0) }) && smc.read(key)?.type == "flt " }
 }
 func spread(_ keys: [String], _ n: Int) -> [String] {
     let step = max(1, keys.count / n)
