@@ -818,6 +818,32 @@ struct NoticeBar: View {
     }
 }
 
+/// Thanh tab tự vẽ. Picker dạng segmented của macOS mới có hiệu ứng trượt kéo dãn viên chọn khi đổi mục;
+/// ở đây viên chọn đổi chỗ tức thì, không hoạt ảnh.
+struct TabBar: View {
+    @Binding var tab: Tab
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(Tab.allCases, id: \.self) { t in
+                let on = t == tab
+                Text(t.rawValue)
+                    .font(.system(size: 13, weight: on ? .semibold : .regular))
+                    .lineLimit(1).minimumScaleFactor(0.85)
+                    .foregroundStyle(on ? Color.white : Color.primary)
+                    .frame(maxWidth: .infinity, minHeight: 26)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(on ? Color.accentColor : Color.clear))
+                    .contentShape(Rectangle())
+                    .onTapGesture { tab = t }
+                    .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
+            }
+        }
+        .padding(2)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.08)))
+        .transaction { $0.animation = nil }
+    }
+}
+
 // MARK: Khung chính
 
 enum Tab: String, CaseIterable {
@@ -866,10 +892,7 @@ struct PopoverView: View {
             }
             .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 10)
 
-            Picker("", selection: $tab) {
-                ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented).labelsHidden().padding(.horizontal, 12)
+            TabBar(tab: $tab).padding(.horizontal, 12)
 
             NoticeBar(tab: $tab)
 
@@ -884,8 +907,14 @@ struct PopoverView: View {
                 case .power: PowerTab()
                 }
             }
+            // Ép đúng 420 điểm: một dòng dài không xuống hàng trong tab nào đó sẽ làm cả cột rộng ra
+            // rồi bị cắt hai bên, thanh tab nhìn như bị kéo dãn.
+            .frame(width: 420)
             .frame(maxHeight: .infinity, alignment: .top)
+            .clipped()
+            .transaction { $0.animation = nil }
         }
-        .frame(width: 420, height: 660)
+        .frame(width: 420, height: 660, alignment: .top)
+        .clipped()
     }
 }

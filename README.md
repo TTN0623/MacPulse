@@ -29,7 +29,7 @@ App tự dò cảm biến và số quạt của từng máy. Bản hiện tại 
 |---|---|
 | Tổng quan | % CPU từng nhân, GPU, RAM, nhiệt độ CPU/GPU/SSD/pin, công suất, tốc độ quạt, đối chiếu với mức nhiệt khuyến nghị |
 | Tiến trình | Xếp theo CPU hoặc RAM, gộp theo ứng dụng; chuột phải để thoát hoặc ghim sang tab Tác vụ |
-| Tác vụ | Phiên Claude Code đang làm gì (model, công cụ đang chạy), việc dựng video kèm % và giờ xong dự kiến |
+| Tác vụ | Phiên Claude Code đang làm gì (model, công cụ đang chạy), việc dựng video kèm % và giờ xong dự kiến, việc tải lên/tải xuống qua mạng |
 | Quạt | Tự động như macOS; Thông minh tăng quạt khi chip vượt ngưỡng (mức Êm, Cân bằng, Mát); Thủ công |
 | Hẹn giờ | Giữ máy thức; ngủ hoặc tắt máy theo giờ hẹn hoặc khi hết việc, có đếm ngược 60 giây |
 

@@ -78,6 +78,15 @@ struct TaskCard: View {
                 if item.progress.fraction != nil || item.progress.eta != nil || item.progress.detail != nil {
                     ProgressBlock(p: item.progress)
                 }
+                if let t = item.transfer {
+                    HStack(spacing: 8) {
+                        Button(t.expected == nil ? "Chọn file đang tải để biết %…" : "Chọn lại file…") { pickFiles() }
+                        if t.expected != nil {
+                            Button("Bỏ") { tracker.setExpectedTransfer(nil) }
+                        }
+                    }
+                    .controlSize(.small)
+                }
                 if !item.children.isEmpty {
                     Divider()
                     let limit = 3
@@ -91,6 +100,38 @@ struct TaskCard: View {
                     }
                 }
             }
+        }
+    }
+}
+
+extension TaskCard {
+    /// Chọn các file hoặc thư mục đang được tải; cộng dung lượng để tính %.
+    func pickFiles() {
+        let panel = NSOpenPanel()
+        panel.title = "Chọn các file hoặc thư mục bạn đang tải"
+        panel.message = "MacPulse cộng dung lượng để tính % (không đọc nội dung file)."
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = true
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK else { return }
+        let urls = panel.urls
+        DispatchQueue.global(qos: .userInitiated).async {
+            var total = 0.0
+            for u in urls {
+                var isDir: ObjCBool = false
+                guard FileManager.default.fileExists(atPath: u.path, isDirectory: &isDir) else { continue }
+                if isDir.boolValue {
+                    let e = FileManager.default.enumerator(at: u, includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey])
+                    while let f = e?.nextObject() as? URL {
+                        let v = try? f.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
+                        if v?.isRegularFile == true { total += Double(v?.fileSize ?? 0) }
+                    }
+                } else {
+                    total += Double((try? u.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+                }
+            }
+            DispatchQueue.main.async { tracker.setExpectedTransfer(total > 0 ? total : nil) }
         }
     }
 }

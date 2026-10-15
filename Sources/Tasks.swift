@@ -10,7 +10,7 @@ struct TaskProgress {
 }
 
 struct TaskItem: Identifiable {
-    enum Kind { case claude, video, app, ai, pinned, child }
+    enum Kind { case claude, video, app, ai, pinned, child, transfer }
     let id: String
     var kind: Kind
     var title: String
@@ -28,6 +28,7 @@ struct TaskItem: Identifiable {
     var pipeIn = false        // ffmpeg đọc khung hình từ ống (stdin)
     var pipeOut = false       // ffmpeg ghi khung hình ra ống (stdout)
     var parentScript: String?
+    var transfer: TransferInfo?
 }
 
 struct FinishedItem: Identifiable {
@@ -389,6 +390,7 @@ final class TaskTracker: ObservableObject {
     @Published private(set) var pins: [PinnedProcess] = []
 
     private let queue = DispatchQueue(label: "macpulse.tasks", qos: .utility)
+    private lazy var net = NetWatcher(queue: queue)
     private var timer: DispatchSourceTimer?
     private var visible = false
     private var background = false
@@ -439,6 +441,11 @@ final class TaskTracker: ObservableObject {
             self.pinsQ.removeAll { $0.id == id }
             self.scan()
         }
+    }
+
+    /// Người dùng cho biết tổng dung lượng đang tải (từ nút "Chọn file…") để tính %.
+    func setExpectedTransfer(_ bytes: Double?) {
+        queue.async { self.net.setExpected(bytes); self.scan() }
     }
 
     func clearFinished() { finished = [] }
@@ -580,9 +587,17 @@ final class TaskTracker: ObservableObject {
                                    symbol: "pin", cpu: cpu, pids: alive))
         }
 
+        // Hai tiến trình claude cùng mở một phiên: chỉ hiện một thẻ.
+        func unique(_ items: [TaskItem]) -> [TaskItem] {
+            var seen = Set<String>()
+            return items.filter { seen.insert($0.id).inserted }
+        }
+        sessions = unique(sessions)
+        idle = unique(idle)
         let orphanJobs = TaskTracker.mergePipelines(jobs.filter { $0.owner == nil }.map(\.item))
         idle += agents.filter { !$0.active }
-        let all = sessions + orphanJobs + appItems + agents.filter(\.active) + pinned
+        let transfers = net.update(now: now, byPid: byPid).map { [$0] } ?? []
+        let all = sessions + orphanJobs + transfers + appItems + agents.filter(\.active) + pinned
         let activeItems = all.filter(\.active) + sessions.flatMap(\.children).filter(\.active)
 
         // 6. Việc vừa xong: có trong lần quét trước mà nay hết chạy
@@ -591,8 +606,11 @@ final class TaskTracker: ObservableObject {
         if let last = lastScanQ, now.timeIntervalSince(last) < 40 {
             for (id, prev) in prevActive where !currentIds.contains(id) {
                 if !id.hasPrefix("cl-"), let st = prev.start, now.timeIntervalSince(st) < 20 { continue }
+                if id.hasPrefix("net-pending") { continue }   // chưa xác định được ứng dụng thì không ghi
                 let took = prev.start.map { " · mất " + Fmt.duration(now.timeIntervalSince($0)) } ?? ""
-                done.append(FinishedItem(title: prev.title, detail: (id.hasPrefix("cl-") ? "Claude xong lượt" : "Đã xong") + took, endedAt: now))
+                let doneTitle = prev.title.replacingOccurrences(of: "Đang tải lên", with: "Đã tải lên")
+                    .replacingOccurrences(of: "Đang tải xuống", with: "Đã tải xuống")
+                done.append(FinishedItem(title: doneTitle, detail: (id.hasPrefix("cl-") ? "Claude xong lượt" : "Đã xong") + took, endedAt: now))
             }
         }
         prevActive = Dictionary(activeItems.map { ($0.id, (title: $0.title, start: $0.startedAt)) }, uniquingKeysWith: { a, _ in a })

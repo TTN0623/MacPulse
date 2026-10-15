@@ -1,5 +1,13 @@
 # Nhật ký thay đổi
 
+## 1.0.1
+
+- Tab Tác vụ hiện việc tải lên và tải xuống qua mạng (Drive, iCloud, Dropbox, trình duyệt, rclone, curl…): tốc độ, dung lượng đã gửi, ứng dụng đang gửi. Chọn file đang tải để có % và giờ xong.
+- Chế độ "Khi xong việc" ở tab Hẹn giờ chờ cả việc tải lên xong mới tắt máy.
+- Thanh tab không còn bị kéo dãn khi đổi tab.
+- Một phiên Claude không còn hiện hai lần.
+- Pipeline dựng video (giải mã, xử lý, mã hóa) gộp thành một việc có %.
+
 ## 1.0.0
 
 Bản phát hành đầu tiên.

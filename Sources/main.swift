@@ -78,7 +78,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         let root = PopoverView(prefs: prefs).environmentObject(monitor).environmentObject(fan)
             .environmentObject(tracker).environmentObject(power).environmentObject(updater)
-        popover.contentViewController = NSHostingController(rootView: root)
+        // Kích thước cố định: nếu để SwiftUI tự báo, mỗi tab có nội dung khác nhau sẽ làm popover co giãn khi chuyển tab.
+        let host = NSHostingController(rootView: root)
+        host.sizingOptions = []
+        popover.contentViewController = host
         popover.contentSize = NSSize(width: 420, height: 660)
         popover.behavior = .transient
         popover.delegate = self
@@ -117,6 +120,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             qaWindow = w
             monitor.setActive(true)
             if UserDefaults.standard.string(forKey: "tab") == Tab.tasks.rawValue { tracker.setVisible(true) }
+        }
+
+        // --qa-cycle: mở bảng rồi tự đổi tab bằng code mỗi 1,2 giây (không cần chuột), để quan sát co giãn.
+        if CommandLine.arguments.contains("--qa-cycle") {
+            let names = Tab.allCases.map(\.rawValue)
+            var i = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { self.togglePopover() }
+            Timer.scheduledTimer(withTimeInterval: 1.2, repeats: true) { _ in
+                i = (i + 1) % names.count
+                UserDefaults.standard.set(names[i], forKey: "tab")
+            }
         }
 
         // Chạy kèm --show thì tự mở bảng (dùng khi kiểm tra giao diện).
