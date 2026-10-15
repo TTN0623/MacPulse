@@ -74,16 +74,4 @@ enum Fmt {
         f.dateFormat = "HH:mm"
         return f.string(from: d)
     }
-
-    /// Tốc độ truyền: "425 KB/giây", "3,2 MB/giây".
-    static func rate(_ bytesPerSec: Double) -> String {
-        bytesPerSec >= 1_000_000
-            ? (bytesPerSec / 1_048_576).formatted(.number.precision(.fractionLength(1)).locale(vi)) + " MB/giây"
-            : Int((bytesPerSec / 1024).rounded()).formatted(.number.locale(vi)) + " KB/giây"
-    }
-
-    /// Dung lượng đã truyền, có KB cho số nhỏ: "850 KB", "215 MB", "1,4 GB".
-    static func size(_ b: Double) -> String {
-        b < 1_000_000 ? Int((b / 1024).rounded()).formatted(.number.locale(vi)) + " KB" : bytes(b)
-    }
 }
