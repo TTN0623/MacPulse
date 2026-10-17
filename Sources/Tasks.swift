@@ -28,6 +28,7 @@ struct TaskItem: Identifiable {
     var pipeIn = false        // ffmpeg đọc khung hình từ ống (stdin)
     var pipeOut = false       // ffmpeg ghi khung hình ra ống (stdout)
     var parentScript: String?
+    var lastActivity: Date?   // lần cuối nhật ký phiên được ghi (chỉ phiên Claude)
 }
 
 struct FinishedItem: Identifiable {
@@ -380,10 +381,13 @@ enum FFmpegProbe {
 // MARK: Bộ theo dõi
 
 final class TaskTracker: ObservableObject {
+    /// Phiên vừa xong lượt dưới ngần này giây thì xếp vào "Vừa chạy", chưa gọi là chờ bạn.
+    static let freshWindow: TimeInterval = 600
     @Published private(set) var tasks: [TaskItem] = []          // việc đang chạy
     @Published private(set) var waiting: [TaskItem] = []        // phiên Claude đang chờ bạn
     @Published private(set) var finished: [FinishedItem] = []
     @Published private(set) var hasActive = false
+    @Published private(set) var sessionCount = 0                // số phiên Claude đang mở (đang làm + chờ)
     @Published private(set) var activeNames: [String] = []
     @Published private(set) var lastScan: Date?
     @Published private(set) var pins: [PinnedProcess] = []
@@ -392,6 +396,7 @@ final class TaskTracker: ObservableObject {
     private var timer: DispatchSourceTimer?
     private var visible = false
     private var background = false
+    private var menuWatch = false
     private var interval: TimeInterval = 0
 
     // Chỉ đụng tới trên queue
@@ -425,6 +430,11 @@ final class TaskTracker: ObservableObject {
         queue.async { self.background = on; self.reschedule() }
     }
 
+    /// Icon thanh menu hiện số phiên Claude: cần quét nền 15 giây/lần.
+    func setMenuWatch(_ on: Bool) {
+        queue.async { self.menuWatch = on; self.reschedule() }
+    }
+
     func pin(_ row: ProcessRow) {
         let p = PinnedProcess(id: "pin-" + row.id, name: row.name, iconPath: row.iconPath, pids: row.pids, pinnedAt: Date())
         queue.async {
@@ -444,7 +454,7 @@ final class TaskTracker: ObservableObject {
     func clearFinished() { finished = [] }
 
     private func reschedule() {
-        let want: TimeInterval = visible ? 3 : (background ? 15 : 0)
+        let want: TimeInterval = visible ? 3 : ((background || menuWatch) ? 15 : 0)
         guard want != interval else { if want > 0 { scan() }; return }
         interval = want
         timer?.cancel()
@@ -611,12 +621,14 @@ final class TaskTracker: ObservableObject {
         pinsQ.removeAll { pin in !pin.pids.contains { byPid[$0] != nil } }
         let pinsOut = pinsQ
         let names = activeItems.map(\.title)
+        let count = (sessions + idle).filter { $0.kind == .claude }.count
 
         DispatchQueue.main.async {
             self.tasks = all
             self.waiting = idle
             self.finished = Array((done + self.finished).filter { now.timeIntervalSince($0.endedAt) < 3600 }.prefix(12))
             self.hasActive = !activeItems.isEmpty
+            self.sessionCount = count
             self.activeNames = names
             self.pins = pinsOut
             self.lastScan = now
@@ -700,7 +712,10 @@ final class TaskTracker: ObservableObject {
         case .tool(let d): status = d
         case .thinking: status = "Đang suy nghĩ…"
         case .waitingUser: status = "Đang hỏi bạn, chờ bạn trả lời"
-        case .idle: status = "Xong lượt, chờ bạn" + (info.lastActivity.map { " · " + Fmt.ago(now.timeIntervalSince($0)) } ?? "")
+        case .idle:
+            let fresh = info.lastActivity.map { now.timeIntervalSince($0) < TaskTracker.freshWindow } ?? false
+            let ago = info.lastActivity.map { now.timeIntervalSince($0) }
+            status = (fresh ? "Vừa chạy xong" : "Xong lượt, chờ bạn") + (ago.map { $0 < 60 && fresh ? "" : " · " + Fmt.ago($0) } ?? "")
         case .unknown: status = "Chưa đọc được nhật ký phiên"
         }
         if info.working && !working { status = "Đã dừng giữa chừng" }
@@ -714,6 +729,7 @@ final class TaskTracker: ObservableObject {
                             subtitle: sub.joined(separator: " · "), status: status, active: working || childActive,
                             startedAt: working ? info.turnStart : nil, iconPath: claudeIcon, symbol: "sparkle",
                             cpu: cpu, children: children, pids: pids)
+        item.lastActivity = info.lastActivity
         if working, info.todoTotal > 0 {
             let p = Double(info.todoDone) / Double(info.todoTotal)
             var eta: TimeInterval?

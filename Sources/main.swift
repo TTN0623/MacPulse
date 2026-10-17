@@ -22,12 +22,16 @@ final class Prefs: ObservableObject {
     @Published var menuBarStyle: MenuBarStyle {
         didSet { UserDefaults.standard.set(menuBarStyle.rawValue, forKey: "menuBarStyle") }
     }
+    @Published var showSessions: Bool {
+        didSet { UserDefaults.standard.set(showSessions, forKey: "showSessions") }
+    }
     @Published var launchAtLogin: Bool {
         didSet { applyLaunchAtLogin() }
     }
 
     init() {
         menuBarStyle = MenuBarStyle(rawValue: UserDefaults.standard.string(forKey: "menuBarStyle") ?? "") ?? .temp
+        showSessions = UserDefaults.standard.object(forKey: "showSessions") as? Bool ?? true
         launchAtLogin = FileManager.default.fileExists(atPath: Prefs.agentPath)
         // Lần đầu mở: bật mở cùng máy để icon luôn có trên thanh menu.
         if !UserDefaults.standard.bool(forKey: "didFirstRun") {
@@ -88,6 +92,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         monitor.onUpdate = { [weak self] in self?.updateStatusItem() }
         // @Published phát trước khi giá trị đổi, nên đợi một nhịp rồi mới vẽ lại.
+        prefs.$showSessions.sink { [weak self] on in
+            self?.tracker.setMenuWatch(on)
+            DispatchQueue.main.async { self?.updateStatusItem() }
+        }.store(in: &bag)
+        tracker.$sessionCount.sink { [weak self] _ in DispatchQueue.main.async { self?.updateStatusItem() } }.store(in: &bag)
         prefs.$menuBarStyle.sink { [weak self] _ in DispatchQueue.main.async { self?.updateStatusItem() } }.store(in: &bag)
         fan.$mode.sink { [weak self] _ in DispatchQueue.main.async { self?.updateStatusItem() } }.store(in: &bag)
         power.objectWillChange.sink { [weak self] _ in DispatchQueue.main.async { self?.updateStatusItem() } }.store(in: &bag)
@@ -190,6 +199,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             let m = max(0, Int((at.timeIntervalSinceNow / 60).rounded(.up)))
             let left = m >= 60 ? "\(m / 60)g\(String(format: "%02d", m % 60))" : "\(m)p"
             text = text.isEmpty ? left : text + " · " + left
+        }
+        // Số phiên Claude đang mở, kiểu "✳3"
+        if prefs.showSessions, tracker.sessionCount > 0 {
+            let c = "✳\(tracker.sessionCount)"
+            text = text.isEmpty ? c : text + " · " + c
         }
         button.imagePosition = text.isEmpty ? .imageOnly : .imageLeading
         button.attributedTitle = NSAttributedString(

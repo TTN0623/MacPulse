@@ -870,6 +870,7 @@ struct PopoverView: View {
                     Picker("Thanh menu hiển thị", selection: $prefs.menuBarStyle) {
                         ForEach(MenuBarStyle.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
+                    Toggle("Hiện số phiên Claude trên thanh menu", isOn: $prefs.showSessions)
                     Toggle("Mở cùng máy", isOn: $prefs.launchAtLogin)
                     Divider()
                     Text("MacPulse \(updater.currentVersion)")

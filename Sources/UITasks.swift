@@ -129,33 +129,24 @@ struct TasksTab: View {
                     HStack { ProgressView().controlSize(.small); Text("Đang quét tác vụ…").foregroundStyle(.secondary) }
                         .frame(maxWidth: .infinity).padding(.top, 30)
                 } else if tracker.tasks.isEmpty {
+                    let n = tracker.sessionCount
                     VStack(spacing: 6) {
-                        Image(systemName: "checkmark.seal").font(.largeTitle).foregroundStyle(.secondary)
-                        Text("Không có tác vụ nào đang chạy").font(.headline)
-                        Text("Phiên Claude, việc xuất video (ffmpeg, Remotion, Whisper, CapCut, Final Cut, Premiere…) sẽ hiện ở đây.")
+                        Image(systemName: n > 0 ? "pause.circle" : "checkmark.seal").font(.largeTitle).foregroundStyle(.secondary)
+                        Text(n > 0 ? "\(n) phiên Claude đang mở, chưa phiên nào đang làm" : "Không có tác vụ nào đang chạy").font(.headline)
+                            .multilineTextAlignment(.center)
+                        Text(n > 0 ? "Các phiên nằm ở mục bên dưới. Phiên đang làm giữa lượt sẽ hiện ở đây." :
+                                "Phiên Claude, việc xuất video (ffmpeg, Remotion, Whisper, CapCut, Final Cut, Premiere…) sẽ hiện ở đây.")
                             .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity).padding(.vertical, 20)
                 }
                 ForEach(tracker.tasks) { TaskCard(item: $0) }
 
-                if !tracker.waiting.isEmpty {
-                    Text("Đang chờ bạn").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).padding(.top, 4)
-                    Card {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(tracker.waiting) { w in
-                                HStack(alignment: .top, spacing: 8) {
-                                    TaskIcon(item: w, size: 18)
-                                    VStack(alignment: .leading, spacing: 1) {
-                                        Text(w.title).font(.callout).lineLimit(1)
-                                        Text([w.subtitle, w.status].filter { !$0.isEmpty }.joined(separator: " · "))
-                                            .font(.caption2).foregroundStyle(.secondary).lineLimit(2)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                let freshCut = Date().addingTimeInterval(-TaskTracker.freshWindow)
+                let recent = tracker.waiting.filter { ($0.lastActivity ?? .distantPast) > freshCut }
+                let others = tracker.waiting.filter { ($0.lastActivity ?? .distantPast) <= freshCut }
+                WaitingSection(title: "Vừa chạy", items: recent)
+                WaitingSection(title: "Đang chờ bạn", items: others)
 
                 if !tracker.finished.isEmpty {
                     HStack {
@@ -339,6 +330,31 @@ struct PowerTab: View {
             }
             Text("Tác vụ gồm mọi thứ ở tab Tác vụ: phiên Claude đang làm, ffmpeg, app dựng phim đang xuất, tiến trình bạn ghim. Có người rê chuột hoặc bấm phím thì đếm lại từ đầu.")
                 .font(.caption2).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+struct WaitingSection: View {
+    let title: String
+    let items: [TaskItem]
+
+    var body: some View {
+        if !items.isEmpty {
+            Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary).padding(.top, 4)
+            Card {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(items) { w in
+                        HStack(alignment: .top, spacing: 8) {
+                            TaskIcon(item: w, size: 18)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(w.title).font(.callout).lineLimit(1)
+                                Text([w.subtitle, w.status].filter { !$0.isEmpty }.joined(separator: " · "))
+                                    .font(.caption2).foregroundStyle(.secondary).lineLimit(2)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

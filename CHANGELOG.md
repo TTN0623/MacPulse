@@ -1,5 +1,11 @@
 # Nhật ký thay đổi
 
+## 1.0.2
+
+- Tab Tác vụ: khi có phiên Claude mở mà chưa phiên nào đang làm, dòng trên cùng ghi số phiên đang mở thay cho "Không có tác vụ nào đang chạy".
+- Phiên vừa xong lượt dưới 10 phút nằm ở mục "Vừa chạy"; quá 10 phút mới xuống "Đang chờ bạn".
+- Thanh menu hiện thêm số phiên Claude đang mở (ví dụ ✳3). Tắt được ở bánh răng, mục "Hiện số phiên Claude trên thanh menu". Bật mục này thì app quét nền 15 giây một lần.
+
 ## 1.0.1
 
 - Sửa thanh tab bị kéo dãn rồi thu lại khi chuyển tab: thay thanh chọn của macOS bằng thanh tự vẽ, không hiệu ứng trượt.
